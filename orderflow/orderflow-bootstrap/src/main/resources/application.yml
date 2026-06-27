@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: orderflow
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/orderflow}
+    username: ${SPRING_DATASOURCE_USERNAME:orderflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:orderflow}
+  jpa:
+    open-in-view: false          # no lazy loading outside the service boundary
+    hibernate:
+      ddl-auto: validate         # Flyway owns the schema; Hibernate only validates
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true                # migrations run automatically on startup
+
+# Render injects PORT; default to 8080 for local runs.
+server:
+  port: ${PORT:8080}
+
+orderflow:
+  security:
+    # MUST be overridden in production via JWT_SECRET. HS256 needs >= 32 bytes.
+    jwt-secret: ${JWT_SECRET:local-dev-secret-change-me-please-32bytes-minimum}
+  outbox:
+    poll-interval-ms: ${OUTBOX_POLL_MS:2000}
+
+# Resilience4j around the outbound broker call (see EventBroadcaster).
+resilience4j:
+  retry:
+    instances:
+      broker:
+        max-attempts: 3
+        wait-duration: 500ms
+  circuitbreaker:
+    instances:
+      broker:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+
+# Kafka is used only when the 'kafka' profile is active (SPRING_PROFILES_ACTIVE=kafka).
+spring.kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  producer:
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Observability: health for the platform, plus metrics/prometheus.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

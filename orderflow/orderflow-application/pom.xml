@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.orderflow</groupId>
+        <artifactId>orderflow-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>orderflow-application</artifactId>
+    <name>OrderFlow :: Application</name>
+    <description>
+        Use cases and ports. Depends only on the domain; no web/persistence
+        framework. Orchestrates the domain and defines the in/out ports that the
+        infrastructure adapters implement.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.orderflow</groupId>
+            <artifactId>orderflow-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Stereotypes (@Service) and declarative transactions (@Transactional).
+             The application layer orchestrates transactions; it stays free of any
+             web or persistence framework. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

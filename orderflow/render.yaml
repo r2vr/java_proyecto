@@ -1,0 +1,28 @@
+# Render blueprint: a Dockerised web service + a free PostgreSQL.
+# Apply via Render > Blueprints (New > Blueprint) pointing at this repo.
+services:
+  - type: web
+    name: orderflow
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: JWT_SECRET            # signing key, generated once and kept by Render
+        generateValue: true
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: orderflow-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: orderflow-db
+          property: password
+      # NOTE: Render's database `connectionString` is a postgres:// URL, while
+      # Spring needs the jdbc:postgresql:// form. Set SPRING_DATASOURCE_URL in the
+      # dashboard to: jdbc:postgresql://<host>:<port>/<database> (Internal values
+      # from the orderflow-db page). See DEPLOYMENT.md.
+
+databases:
+  - name: orderflow-db
+    plan: free

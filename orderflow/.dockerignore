@@ -1,0 +1,10 @@
+# Keep the Docker build context small and reproducible.
+target/
+**/target/
+.git/
+.github/
+.idea/
+*.iml
+docs/
+*.md
+.dockerignore

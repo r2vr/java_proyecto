@@ -1,0 +1,30 @@
+name: CI
+
+# Runs on every push and pull request so the project is always known-good.
+# This is the "review surface": a green check on each commit shows the build
+# compiles and all tests pass, before anything is ever deployed.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin) with Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and run tests
+        run: mvn -B verify
+
+      # Once integration tests (Testcontainers) land in slice 1, they run here too:
+      # GitHub's runners ship with Docker, so Testcontainers works out of the box.
