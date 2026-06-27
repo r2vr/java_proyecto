@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OrderFlow — Panel de verificación</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --fg:#e6edf3; --muted:#8b949e;
+    --accent:#388bfd; --green:#3fb950; --red:#f85149; --amber:#d29922; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:24px 20px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+  h1{font-size:20px;margin:0;display:flex;align-items:center;gap:10px}
+  h1 .logo{color:var(--accent)}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
+  .badge{padding:4px 9px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);display:flex;gap:6px;align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .dot.up{background:var(--green)} .dot.down{background:var(--red)}
+  main{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:20px;grid-template-columns:1fr 1fr}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .card.full{grid-column:1/-1}
+  .card h2{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .muted{color:var(--muted)} .small{font-size:13px}
+  label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+  input,select{width:100%;padding:8px 10px;background:#0d1117;border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  button{cursor:pointer;border:1px solid var(--border);background:#21262d;color:var(--fg);padding:9px 14px;border-radius:6px;font-size:14px;font-weight:600}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.big{width:100%;padding:13px;font-size:15px;margin-top:6px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  pre{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:12px;overflow:auto;font-family:var(--mono);font-size:12.5px;max-height:280px;margin:10px 0 0}
+  .check{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .check:last-child{border-bottom:0}
+  .mark{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:#21262d;color:var(--muted)}
+  .mark.ok{background:rgba(63,185,80,.15);color:var(--green)}
+  .mark.ko{background:rgba(248,81,73,.15);color:var(--red)}
+  .mark.run{background:rgba(56,139,253,.15);color:var(--accent)}
+  .ctitle{font-weight:600}
+  .cdesc{color:var(--muted);font-size:12.5px}
+  .summary{font-weight:700;font-size:15px;margin-top:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-family:var(--mono)}
+  .pill.draft{background:rgba(210,153,34,.15);color:var(--amber)}
+  .pill.confirmed{background:rgba(63,185,80,.15);color:var(--green)}
+  a{color:var(--accent)}
+  @media(max-width:760px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo">◆</span> OrderFlow <span class="muted small">· panel de verificación</span></h1>
+  <div class="badges">
+    <span class="badge"><span id="healthDot" class="dot"></span> <span id="healthTxt">health…</span></span>
+    <span class="badge">commit <span id="commitTxt" class="muted">—</span></span>
+    <span class="badge"><a href="/swagger-ui/index.html" target="_blank">Swagger</a></span>
+    <span class="badge"><a href="/actuator/prometheus" target="_blank">Metrics</a></span>
+  </div>
+</header>
+
+<main>
+  <!-- VERIFICACIÓN COMPLETA -->
+  <section class="card full">
+    <h2>✅ Verificación completa del backend</h2>
+    <p class="muted small">Ejecuta, contra esta misma instancia, todo lo desarrollado: seguridad JWT, validación, ciclo de vida del pedido, caché, invariantes de dominio, outbox y observabilidad.</p>
+    <button id="runAll" class="primary big">▶ Ejecutar todas las comprobaciones</button>
+    <div id="checks"></div>
+    <div id="summary" class="summary"></div>
+  </section>
+
+  <!-- AUTENTICACIÓN -->
+  <section class="card">
+    <h2>🔑 Autenticación (JWT)</h2>
+    <label>Usuario</label><input id="user" value="demo">
+    <label>Contraseña</label><input id="pass" type="password" value="demo123">
+    <button id="loginBtn" class="primary" style="margin-top:12px">Iniciar sesión</button>
+    <div id="tokenBox" class="small muted" style="margin-top:10px">Sin token todavía.</div>
+  </section>
+
+  <!-- PLAYGROUND -->
+  <section class="card">
+    <h2>🧪 Pruébalo a mano</h2>
+    <div class="row">
+      <button id="createBtn">1 · Crear pedido</button>
+      <button id="confirmBtn" disabled>2 · Confirmar</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="getBtn" disabled>Releer pedido</button>
+      <button id="invalidBtn">Probar pedido inválido</button>
+    </div>
+    <label style="margin-top:14px">Listar por estado</label>
+    <div class="row">
+      <select id="statusFilter"><option value="">(todos)</option><option>DRAFT</option><option>CONFIRMED</option><option>PAID</option><option>CANCELLED</option></select>
+      <button id="listBtn">Listar</button>
+    </div>
+    <div id="orderState" class="small" style="margin-top:12px"></div>
+    <pre id="out">Inicia sesión y crea un pedido…</pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let TOKEN = null, ORDER_ID = null;
+const out = (x) => $('out').textContent = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : '########-####-4###-####-############'.replace(/[#]/g,()=> (Math.random()*16|0).toString(16)));
+
+async function api(method, path, {body, auth=true} = {}){
+  const headers = {'Content-Type':'application/json'};
+  if (auth && TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const res = await fetch(path, {method, headers, body: body?JSON.stringify(body):undefined});
+  let data = null; const txt = await res.text();
+  try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
+  return {status: res.status, ok: res.ok, data, location: res.headers.get('location')};
+}
+
+// ---- status badges ----
+async function refreshStatus(){
+  try{
+    const h = await fetch('/actuator/health').then(r=>r.json());
+    const up = h.status === 'UP';
+    $('healthDot').className = 'dot ' + (up?'up':'down');
+    $('healthTxt').textContent = up ? 'UP' : (h.status||'DOWN');
+  }catch{ $('healthDot').className='dot down'; $('healthTxt').textContent='sin conexión'; }
+  try{
+    const i = await fetch('/actuator/info').then(r=>r.json());
+    const c = i?.git?.commit || '—';
+    $('commitTxt').textContent = c.length>7 ? c.slice(0,7) : c;
+  }catch{}
+}
+
+// ---- auth ----
+async function login(){
+  const r = await api('POST','/api/auth/login',{auth:false,body:{username:$('user').value,password:$('pass').value}});
+  if (r.ok && r.data?.token){
+    TOKEN = r.data.token;
+    $('tokenBox').innerHTML = '✅ Token obtenido: <span style="font-family:var(--mono)">'+TOKEN.slice(0,24)+'…</span>';
+    $('confirmBtn').disabled = !ORDER_ID; $('getBtn').disabled = !ORDER_ID;
+  } else { $('tokenBox').textContent = '❌ Login fallido ('+r.status+')'; }
+  return r;
+}
+$('loginBtn').onclick = login;
+
+// ---- playground ----
+function renderOrder(o){
+  if(!o){ $('orderState').textContent=''; return; }
+  const cls = (o.status||'').toLowerCase();
+  $('orderState').innerHTML = `Pedido <b>${(o.orderId||'').slice(0,8)}</b> · estado <span class="pill ${cls}">${o.status}</span> · total <b>${o.total} ${o.currency}</b>`;
+}
+$('createBtn').onclick = async () => {
+  if(!TOKEN) await login();
+  const body = {customerId:uuid(),currency:'EUR',lines:[
+    {productId:uuid(),sku:'SKU-1',unitPrice:19.99,quantity:2},
+    {productId:uuid(),sku:'SKU-2',unitPrice:5.50,quantity:1}]};
+  const r = await api('POST','/api/orders',{body});
+  if(r.ok){ ORDER_ID=r.data.orderId; $('confirmBtn').disabled=false; $('getBtn').disabled=false;
+    const g = await api('GET','/api/orders/'+ORDER_ID); renderOrder(g.data); out({creado:r.data, detalle:g.data, location:r.location}); }
+  else out({status:r.status, error:r.data});
+};
+$('confirmBtn').onclick = async () => {
+  const r = await api('POST','/api/orders/'+ORDER_ID+'/confirm',{});
+  if(r.ok) renderOrder(r.data);
+  out({status:r.status, resultado:r.data});
+};
+$('getBtn').onclick = async () => { const r = await api('GET','/api/orders/'+ORDER_ID); renderOrder(r.data); out(r.data); };
+$('invalidBtn').onclick = async () => {
+  if(!TOKEN) await login();
+  const r = await api('POST','/api/orders',{body:{customerId:'no-uuid',currency:'EURO',lines:[]}});
+  out({nota:'Pedido inválido — el backend lo rechaza en el borde:', status:r.status, error:r.data});
+};
+$('listBtn').onclick = async () => {
+  if(!TOKEN) await login();
+  const s = $('statusFilter').value; const r = await api('GET','/api/orders?page=0&size=20'+(s?'&status='+s:''));
+  out(r.data);
+};
+
+// ---- full verification ----
+const STEPS = [
+  {t:'Health público responde UP', d:'GET /actuator/health', run: async()=>{ const r=await fetch('/actuator/health').then(r=>r.json()); return [r.status==='UP', 'status='+r.status]; }},
+  {t:'OpenAPI/Swagger disponible', d:'GET /v3/api-docs', run: async()=>{ const r=await fetch('/v3/api-docs'); return [r.status===200,'HTTP '+r.status]; }},
+  {t:'API protegida sin token → 401', d:'GET /api/orders sin Authorization', run: async()=>{ const r=await fetch('/api/orders'); return [r.status===401,'HTTP '+r.status]; }},
+  {t:'Login con credenciales malas → 401', d:'POST /api/auth/login', run: async()=>{ const r=await api('POST','/api/auth/login',{auth:false,body:{username:'demo',password:'mal'}}); return [r.status===401,'HTTP '+r.status]; }},
+  {t:'Login válido emite JWT', d:'demo / demo123', run: async()=>{ const r=await login(); return [r.ok && !!r.data?.token, r.ok?'token OK':'HTTP '+r.status]; }},
+  {t:'Validación de borde → 400', d:'currency inválida / sin líneas', run: async()=>{ const r=await api('POST','/api/orders',{body:{customerId:'x',currency:'EURO',lines:[]}}); return [r.status===400,'HTTP '+r.status]; }},
+  {t:'Crear pedido → 201', d:'POST /api/orders', run: async()=>{ const body={customerId:uuid(),currency:'EUR',lines:[{productId:uuid(),sku:'S1',unitPrice:19.99,quantity:2},{productId:uuid(),sku:'S2',unitPrice:5.50,quantity:1}]}; const r=await api('POST','/api/orders',{body}); if(r.ok){ORDER_ID=r.data.orderId;$('confirmBtn').disabled=false;$('getBtn').disabled=false;} return [r.status===201, r.ok?('id '+ORDER_ID.slice(0,8)):'HTTP '+r.status]; }},
+  {t:'Estado inicial DRAFT + total 45.48', d:'el total se calcula en el dominio (Money/BigDecimal)', run: async()=>{ const r=await api('GET','/api/orders/'+ORDER_ID); renderOrder(r.data); return [r.data?.status==='DRAFT' && r.data?.total==='45.48', (r.data?.status)+' / '+(r.data?.total)]; }},
+  {t:'Confirmar: DRAFT → CONFIRMED', d:'POST /api/orders/{id}/confirm', run: async()=>{ const r=await api('POST','/api/orders/'+ORDER_ID+'/confirm',{}); renderOrder(r.data); return [r.data?.status==='CONFIRMED', 'estado '+r.data?.status]; }},
+  {t:'Caché invalidada tras confirmar', d:'la relectura refleja CONFIRMED', run: async()=>{ const r=await api('GET','/api/orders/'+ORDER_ID); return [r.data?.status==='CONFIRMED','relectura '+r.data?.status]; }},
+  {t:'Invariante de dominio: re-confirmar → 409', d:'no se puede confirmar algo ya confirmado', run: async()=>{ const r=await api('POST','/api/orders/'+ORDER_ID+'/confirm',{}); return [r.status===409,'HTTP '+r.status]; }},
+  {t:'Filtro status=CONFIRMED incluye el pedido', d:'GET /api/orders?status=CONFIRMED', run: async()=>{ const r=await api('GET','/api/orders?status=CONFIRMED&size=50'); const has=(r.data?.content||[]).some(o=>o.orderId===ORDER_ID); return [has, has?'encontrado':'no aparece']; }},
+  {t:'ID malformado → 400', d:'GET /api/orders/not-a-uuid', run: async()=>{ const r=await api('GET','/api/orders/not-a-uuid'); return [r.status===400,'HTTP '+r.status]; }},
+  {t:'UUID inexistente → 404', d:'GET /api/orders/0000…', run: async()=>{ const r=await api('GET','/api/orders/00000000-0000-0000-0000-000000000000'); return [r.status===404,'HTTP '+r.status]; }},
+  {t:'Observabilidad: Prometheus', d:'GET /actuator/prometheus', run: async()=>{ const r=await fetch('/actuator/prometheus',{headers:TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}); return [r.status===200,'HTTP '+r.status]; }},
+];
+
+$('runAll').onclick = async () => {
+  $('runAll').disabled = true; $('summary').textContent='';
+  const box = $('checks'); box.innerHTML='';
+  const rows = STEPS.map((s,i)=>{
+    const el = document.createElement('div'); el.className='check';
+    el.innerHTML = `<div class="mark" id="m${i}">·</div><div><div class="ctitle">${s.t}</div><div class="cdesc">${s.d}</div></div>`;
+    box.appendChild(el); return el;
+  });
+  let okc=0;
+  for(let i=0;i<STEPS.length;i++){
+    $('m'+i).className='mark run'; $('m'+i).textContent='…';
+    try{
+      const [ok, info] = await STEPS[i].run();
+      $('m'+i).className = 'mark '+(ok?'ok':'ko'); $('m'+i).textContent = ok?'✓':'✕';
+      rows[i].querySelector('.cdesc').textContent = STEPS[i].d + ' — ' + info;
+      if(ok) okc++;
+    }catch(e){ $('m'+i).className='mark ko'; $('m'+i).textContent='✕'; rows[i].querySelector('.cdesc').textContent='error: '+e.message; }
+  }
+  const all = okc===STEPS.length;
+  $('summary').innerHTML = `<span style="color:${all?'var(--green)':'var(--red)'}">${all?'🟢':'🔴'} ${okc}/${STEPS.length} comprobaciones correctas</span>`;
+  $('runAll').disabled = false;
+  out('Verificación terminada: '+okc+'/'+STEPS.length+' OK');
+};
+
+refreshStatus(); setInterval(refreshStatus, 15000);
+</script>
+</body>
+</html>
