@@ -166,4 +166,3 @@ El módulo de dominio se compila también con solo `javac` por no tener dependen
 - Inglés en código y commits; español en esta documentación de proyecto.
 - Commits estilo *Conventional Commits* (`feat:`, `test:`, `refactor:`…).
 - Un value object/aggregate por fichero; tests que se leen como especificaciones.
-# java_proyecto
