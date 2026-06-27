@@ -75,6 +75,11 @@
                     <version>3.13.0</version>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                        <!-- Emit method parameter names so Spring MVC can bind
+                             @PathVariable/@RequestParam without explicit names.
+                             Spring Boot's parent enables this by default; our
+                             custom parent must set it explicitly. -->
+                        <parameters>true</parameters>
                     </configuration>
                 </plugin>
                 <plugin>
