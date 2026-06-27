@@ -60,6 +60,19 @@ management:
     health:
       probes:
         enabled: true
+  info:
+    env:
+      enabled: true        # let the info contributor expose the info.* block below
+
+# Exposed at /actuator/info so automation can tell which commit is live.
+# Render injects RENDER_GIT_COMMIT/RENDER_GIT_BRANCH at build & runtime; locally
+# these fall back to "local".
+info:
+  app:
+    name: orderflow
+  git:
+    commit: ${RENDER_GIT_COMMIT:local}
+    branch: ${RENDER_GIT_BRANCH:local}
 
 springdoc:
   swagger-ui:

@@ -1,0 +1,51 @@
+name: E2E (production)
+
+# Verifies the live Render deployment after every push to main.
+#
+# Flow: a push to main triggers Render's auto-deploy AND this workflow. The job
+# polls /actuator/info until the commit Render is serving matches this commit's
+# SHA (so it waits out the Render build), then runs the full E2E smoke test
+# against the public URL. A red run here means production is broken.
+#
+# Requirements:
+#   - Render service "orderflow" must have Auto-Deploy = Yes (Settings > Build & Deploy).
+#   - Optionally set repo variable PROD_BASE_URL to override the default URL below.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # allow manual "verify prod now" runs
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: ${{ vars.PROD_BASE_URL || 'https://orderflow-evs0.onrender.com' }}
+
+jobs:
+  e2e-against-prod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Wait for Render to deploy this commit
+        run: |
+          set -u
+          want="$GITHUB_SHA"
+          echo "Waiting for $BASE_URL to serve commit $want"
+          deadline=$(( $(date +%s) + 1200 ))   # up to 20 min (Render free build + cold start)
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            live=$(curl -s --max-time 70 "$BASE_URL/actuator/info" | jq -r '.git.commit // empty' 2>/dev/null || true)
+            if [ "$live" = "$want" ]; then
+              echo "::notice::Live commit matches ($live). Proceeding."
+              exit 0
+            fi
+            echo "live=[${live:-none}] want=[$want] — not yet, retrying in 20s"
+            sleep 20
+          done
+          echo "::error::Timed out waiting for Render to serve $want. Is Auto-Deploy enabled?"
+          exit 1
+
+      - name: Run E2E smoke test against production
+        run: BASE="$BASE_URL" bash scripts/e2e.sh
