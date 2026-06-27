@@ -2,7 +2,11 @@ spring:
   application:
     name: orderflow
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/orderflow}
+    # SPRING_DATASOURCE_URL wins if set explicitly; otherwise build the JDBC URL
+    # from the parts Render exposes (DB_HOST/DB_PORT/DB_NAME), falling back to
+    # localhost for local runs. Render's own DB connectionString is postgres://,
+    # which Spring can't consume, so we assemble the jdbc: form here.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:orderflow}}
     username: ${SPRING_DATASOURCE_USERNAME:orderflow}
     password: ${SPRING_DATASOURCE_PASSWORD:orderflow}
   jpa:

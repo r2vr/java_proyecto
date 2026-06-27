@@ -18,10 +18,21 @@ services:
         fromDatabase:
           name: orderflow-db
           property: password
-      # NOTE: Render's database `connectionString` is a postgres:// URL, while
-      # Spring needs the jdbc:postgresql:// form. Set SPRING_DATASOURCE_URL in the
-      # dashboard to: jdbc:postgresql://<host>:<port>/<database> (Internal values
-      # from the orderflow-db page). See DEPLOYMENT.md.
+      # Render's connectionString is a postgres:// URL, which Spring can't use.
+      # Inject the parts instead; application.yml assembles the jdbc:postgresql://
+      # URL from these, so no manual SPRING_DATASOURCE_URL is needed.
+      - key: DB_HOST
+        fromDatabase:
+          name: orderflow-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: orderflow-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: orderflow-db
+          property: database
 
 databases:
   - name: orderflow-db
