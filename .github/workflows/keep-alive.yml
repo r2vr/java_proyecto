@@ -1,0 +1,35 @@
+name: Keep alive
+
+# Render's free tier spins the service down after ~15 min of inactivity, so the
+# next visitor hits a ~50s cold start. This workflow pings the health endpoint
+# every 10 minutes to keep the instance warm, so the demo loads instantly.
+#
+# Trade-off: this keeps the service awake ~24/7, using most of Render's free
+# 750 instance-hours/month. Fine for a single free service; remove this workflow
+# if you add more or move to a paid plan.
+#
+# Note: GitHub disables scheduled workflows after 60 days with no repo activity,
+# and cron runs can be delayed a few minutes under load. For a portfolio that's
+# good enough; for rock-solid uptime use an external monitor (e.g. UptimeRobot).
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: ${{ vars.PROD_BASE_URL || 'https://orderflow-evs0.onrender.com' }}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 "$BASE_URL/actuator/health" || echo 000)
+          echo "GET $BASE_URL/actuator/health -> $code"
+          # A wake-up may still be in progress; don't fail the run for a single miss.
+          [ "$code" = "200" ] && echo "::notice::Service is warm" || echo "::warning::Health returned $code (waking up?)"
